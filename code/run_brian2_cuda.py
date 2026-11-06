@@ -245,7 +245,7 @@ def _run_standalone_benchmark(t_run_sec, n_run, use_cuda, exc, exc2, slnc,
         shutil.rmtree(output_dir)
 
     t_build_start = time()
-    brian_device.build(directory=output_dir, run=False, with_output=False)
+    brian_device.build(directory=output_dir, run=False, with_output=False, clean=True)
     timings['device_build'] = time() - t_build_start
     logger.log(f"  Build time:       {timings['device_build']:.3f}s")
 
