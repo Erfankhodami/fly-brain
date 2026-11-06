@@ -10,16 +10,16 @@ The visual simulator couples an ultra-fast GPU spiking neural network engine dir
 
 ```mermaid
 flowchart LR
-    subgraph GPU Simulation Engine
+    subgraph GPU_Engine ["GPU Simulation Engine"]
         CUDA["RTX 3050 GPU (PyTorch CUDA)"] --> ENGINE["RealtimeSubnetLIF Engine (CUDA Graph)"]
         ENGINE --> BUFFER["Ring Delay Buffer + Sparse CSR (512k Synapses)"]
     end
 
-    subgraph Backend Server
+    subgraph Backend_Server ["Backend Server"]
         BUFFER --> TORNADO["Tornado WebSocket Server (code/visual_server.py)"]
     end
 
-    subgraph Browser Frontend
+    subgraph Browser_UI ["Browser Frontend"]
         TORNADO <== "30-60 FPS Streaming (/ws)" ==> UI["Interactive UI (http://localhost:8080)"]
         UI --> MAP["5,000-Neuron Animated Connectome Map"]
         UI --> RASTER["Rolling 2-Second Spike Raster"]

@@ -134,12 +134,12 @@ Stimulates 42 Bitter GRNs at 200 Hz to confirm proboscis extension motor neurons
 
 ```mermaid
 flowchart TD
-    subgraph Locomotion Pathway
+    subgraph Locomotion_Pathway ["Locomotion Pathway"]
         P9["P9 Sensory Inputs (100 Hz)"] --> DNa["DNa02 Steering Neurons (6-18 Hz)"]
         P9 --> oDN["P9_oDN1 Walking Neurons (1-15 Hz)"]
     end
 
-    subgraph Feeding Pathway
+    subgraph Feeding_Pathway ["Feeding Pathway"]
         SUGAR["Sugar GRNs (200 Hz)"] --> SEZ["SEZ Interneurons (40+ active, max 136 Hz)"]
         SEZ --> MN9["MN9 Motor Neurons (60-95 Hz)"]
     end

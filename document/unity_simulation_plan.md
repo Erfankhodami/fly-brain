@@ -10,7 +10,7 @@ The setup operates as a high-speed, closed-loop **embodied sensorimotor system**
 
 ```mermaid
 flowchart TD
-    subgraph Unity 3D Game Engine (Client)
+    subgraph Unity_Client ["Unity 3D Game Engine (Client)"]
         SCENE["3D Scene (Sugar Cubes, Obstacles, Terrain)"] --> SENSORS["FlySensors.cs (Bilateral Vision & Taste Colliders)"]
         SENSORS --> PACK["Pack Sensory JSON (Left/Right Eye Angle & Touch)"]
         PACK --> WS_CLIENT["FlyBrainClient.cs (WebSocket Client)"]
@@ -23,11 +23,11 @@ flowchart TD
         RIGIDBODY & ANIM --> SCENE
     end
 
-    subgraph Python Connectome Engine (Server on RTX 3050 GPU)
+    subgraph Python_Server ["Python Connectome Engine (Server on RTX 3050 GPU)"]
         WS_SERVER["visual_server.py (/game_ws Endpoint)"] --> PARSE["Unpack Sensory Drive to Firing Rates (Hz)"]
         PARSE --> GPU["RealtimeSubnetLIF Engine (PyTorch CUDA Graph)"]
         
-        subgraph 5,000-Neuron Subnetwork
+        subgraph Subnet_5k ["5,000-Neuron Subnetwork"]
             GPU --> LC["LC Visual Projection & P9 Inputs"]
             GPU --> GRN["Sugar / Bitter GRN Taste Receptors"]
             LC & GRN --> SEZ["SEZ Interneurons (512k Synapses)"]

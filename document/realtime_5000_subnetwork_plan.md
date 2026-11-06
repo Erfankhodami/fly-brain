@@ -44,7 +44,7 @@ We group the implementation into three core components:
 
 ```mermaid
 flowchart TD
-    subgraph 1. Graph Extraction
+    subgraph Graph_Extraction ["1. Graph Extraction"]
         RAW_CON[2025_Connectivity_783.parquet] --> EXTRACT[extract_subnetwork.py]
         RAW_COMP[2025_Completeness_783.csv] --> EXTRACT
         SEZ_PKL[sez_neurons.pickle] --> EXTRACT
@@ -53,7 +53,7 @@ flowchart TD
         EXTRACT --> SUB_PQ[subnetwork_edges.parquet]
     end
 
-    subgraph 2. Real-Time Engine
+    subgraph Realtime_Engine ["2. Real-Time Engine"]
         SUB_CSR --> RT_ENGINE[realtime_subnet_engine.py]
         SUB_META --> RT_ENGINE
         RT_ENGINE --> RING[Circular Ring Delay Buffer: O 1 Zero-Copy]
@@ -61,7 +61,7 @@ flowchart TD
         RT_ENGINE --> GRAPH[CUDA Graph / Block-Step Runner]
     end
 
-    subgraph 3. Benchmark & Verification
+    subgraph Benchmark_Verification ["3. Benchmark & Verification"]
         RT_ENGINE --> BENCH[benchmark_realtime.py]
         RT_ENGINE --> VERIFY[verify_subnet_parity.py vs Brian2]
         BENCH --> TIMINGS[realtime_timings.csv]
