@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Drosophila Connectome Subnetwork - Real-Time Visual Simulator</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    :root {
+      --bg: #090c12;
+      --card-bg: #121722;
+      --card-border: #1f2738;
+      --text: #e2e8f0;
+      --text-muted: #7b8ba5;
+      --cyan: #00f0ff;
+      --green: #00ff66;
+      --red: #ff334b;
+      --gold: #ffcc00;
+      --magenta: #ff00dd;
+      --indigo: #7744ff;
+      --blue: #2563eb;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", monospace;
+      overflow-x: hidden;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+    header {
+      background: #0d121c;
+      border-bottom: 1px solid var(--card-border);
+      padding: 10px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 58px;
+    }
+    .header-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 1.15rem;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.8rem;
+      background: rgba(0, 255, 102, 0.12);
+      color: var(--green);
+      border: 1px solid rgba(0, 255, 102, 0.3);
+      padding: 4px 10px;
+      border-radius: 9999px;
+    }
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      background: var(--green);
+      border-radius: 50%;
+      box-shadow: 0 0 8px var(--green);
+      animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse {
+      0% { opacity: 0.4; } 50% { opacity: 1; } 100% { opacity: 0.4; }
+    }
+    .header-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .btn {
+      background: #1c2436;
+      border: 1px solid #2e3a54;
+      color: var(--text);
+      padding: 6px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.85rem;
+      transition: all 0.15s ease;
+    }
+    .btn:hover { background: #26324a; border-color: var(--cyan); }
+    .btn-primary { background: #1e3a8a; border-color: #3b82f6; color: #fff; }
+    .btn-primary:hover { background: #2563eb; }
+
+    /* Main Grid */
+    main {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 320px 1fr 340px;
+      gap: 12px;
+      padding: 12px;
+      height: calc(100vh - 58px);
+      overflow: hidden;
+    }
+
+    .panel {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .panel-header {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--card-border);
+      font-size: 0.9rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .panel-body {
+      padding: 14px;
+      overflow-y: auto;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* Control Groups */
+    .control-card {
+      background: #0d121c;
+      border: 1px solid #1a2335;
+      border-radius: 8px;
+      padding: 12px;
+    }
+    .control-title {
+      font-size: 0.85rem;
+      font-weight: 600;
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .slider-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 6px;
+    }
+    input[type=range] {
+      flex: 1;
+      accent-color: var(--cyan);
+      height: 5px;
+      background: #2a3449;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .slider-val {
+      font-family: monospace;
+      font-size: 0.85rem;
+      min-width: 48px;
+      text-align: right;
+      color: var(--cyan);
+    }
+    .preset-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .preset-btn {
+      padding: 8px;
+      font-size: 0.8rem;
+      text-align: center;
+      background: #151c2c;
+      border: 1px solid #26344d;
+      border-radius: 6px;
+      color: var(--text);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .preset-btn:hover {
+      background: #1f2b42;
+      border-color: var(--cyan);
+    }
+
+    /* Center Visualizers */
+    .center-col {
+      display: grid;
+      grid-template-rows: 1fr 180px;
+      gap: 12px;
+      height: 100%;
+    }
+    .canvas-container {
+      position: relative;
+      background: #07090e;
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+    }
+    .canvas-overlay {
+      position: absolute;
+      top: 10px;
+      left: 12px;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      pointer-events: none;
+      background: rgba(9, 12, 18, 0.7);
+      padding: 4px 8px;
+      border-radius: 4px;
+      border: 1px solid #1a2335;
+    }
+    .tooltip {
+      position: absolute;
+      display: none;
+      background: rgba(18, 23, 34, 0.95);
+      border: 1px solid var(--cyan);
+      border-radius: 6px;
+      padding: 8px 12px;
+      font-size: 0.75rem;
+      color: #fff;
+      pointer-events: none;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.6);
+      z-index: 100;
+    }
+
+    /* Behavioral Gauges */
+    .gauge-card {
+      background: #0d121c;
+      border: 1px solid #1a2335;
+      border-radius: 8px;
+      padding: 12px;
+    }
+    .gauge-label {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 6px;
+    }
+    .progress-bar {
+      height: 10px;
+      background: #1a2335;
+      border-radius: 5px;
+      overflow: hidden;
+      position: relative;
+    }
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      background: var(--magenta);
+      transition: width 0.1s ease;
+      box-shadow: 0 0 10px var(--magenta);
+    }
+    .steering-track {
+      height: 16px;
+      background: #151c2c;
+      border-radius: 8px;
+      position: relative;
+      margin-top: 6px;
+      border: 1px solid #222e44;
+    }
+    .steering-needle {
+      position: absolute;
+      top: 1px;
+      left: 50%;
+      width: 6px;
+      height: 12px;
+      background: var(--gold);
+      border-radius: 3px;
+      transform: translateX(-50%);
+      transition: left 0.1s ease;
+      box-shadow: 0 0 8px var(--gold);
+    }
+
+    /* Telemetry HUD */
+    .telemetry-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .metric-box {
+      background: #0a0e17;
+      border: 1px solid #1a2335;
+      border-radius: 6px;
+      padding: 8px 10px;
+    }
+    .metric-name {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+    .metric-value {
+      font-family: monospace;
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--cyan);
+      margin-top: 2px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Bar -->
+  <header>
+    <div class="header-title">
+      <span>🧠 Drosophila 5,000-Neuron Real-Time Subnetwork</span>
+      <div class="status-badge" id="status-badge">
+        <div class="pulse-dot"></div>
+        <span id="status-text">Connecting...</span>
+      </div>
+    </div>
+    <div class="header-controls">
+      <button class="btn btn-primary" id="pause-btn">Pause</button>
+      <button class="btn" id="reset-btn">Reset</button>
+    </div>
+  </header>
+
+  <!-- Main 3-Column Interface -->
+  <main>
+
+    <!-- Left Column: Stimulation Deck -->
+    <section class="panel">
+      <div class="panel-header">
+        <span>Stimulation Deck</span>
+        <span>⚡ Input</span>
+      </div>
+      <div class="panel-body">
+
+        <!-- Sugar GRN Slider -->
+        <div class="control-card">
+          <div class="control-title">
+            <span style="color: var(--green);">🍭 Sugar Feeding (GRNs)</span>
+            <span class="slider-val" id="sugar-val">0 Hz</span>
+          </div>
+          <div class="slider-row">
+            <input type="range" id="sugar-slider" min="0" max="300" step="10" value="0">
+          </div>
+        </div>
+
+        <!-- Bitter GRN Slider -->
+        <div class="control-card">
+          <div class="control-title">
+            <span style="color: var(--red);">🍋 Bitter Aversion (GRNs)</span>
+            <span class="slider-val" id="bitter-val">0 Hz</span>
+          </div>
+          <div class="slider-row">
+            <input type="range" id="bitter-slider" min="0" max="300" step="10" value="0">
+          </div>
+        </div>
+
+        <!-- Locomotion Walking Slider -->
+        <div class="control-card">
+          <div class="control-title">
+            <span style="color: var(--cyan);">🏃 Walking Drive (P9 Bilateral)</span>
+            <span class="slider-val" id="p9-val">0 Hz</span>
+          </div>
+          <div class="slider-row">
+            <input type="range" id="p9-slider" min="0" max="200" step="10" value="0">
+          </div>
+        </div>
+
+        <!-- Steering Bias Slider -->
+        <div class="control-card">
+          <div class="control-title">
+            <span style="color: var(--gold);">🧭 Steering Bias (L / R)</span>
+            <span class="slider-val" id="steer-val">Center</span>
+          </div>
+          <div class="slider-row">
+            <input type="range" id="steer-slider" min="-100" max="100" step="5" value="0">
+          </div>
+        </div>
+
+        <!-- Quick Protocol Presets -->
+        <div class="control-card">
+          <div class="control-title">Quick Protocol Presets</div>
+          <div class="preset-grid">
+            <div class="preset-btn" onclick="applyPreset('sugar')">🍭 Sugar (200Hz)</div>
+            <div class="preset-btn" onclick="applyPreset('bitter')">🍋 Bitter (200Hz)</div>
+            <div class="preset-btn" onclick="applyPreset('walk')">🏃 Walk (100Hz)</div>
+            <div class="preset-btn" onclick="applyPreset('steer_left')">↪️ Turn Left</div>
+            <div class="preset-btn" onclick="applyPreset('steer_right')">↩️ Turn Right</div>
+            <div class="preset-btn" onclick="applyPreset('clear')">⏸️ Idle / Clear</div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Center Column: Visualizers -->
+    <section class="center-col">
+      <!-- Neural Map Canvas -->
+      <div class="canvas-container" id="map-container">
+        <canvas id="neural-map"></canvas>
+        <div class="canvas-overlay">Drosophila 5,000-Neuron Map (RTX 3050 CUDA)</div>
+        <div class="tooltip" id="tooltip"></div>
+      </div>
+
+      <!-- Live Spike Raster Canvas -->
+      <div class="canvas-container" id="raster-container">
+        <canvas id="raster-plot"></canvas>
+        <div class="canvas-overlay">Real-Time Spike Raster (Last 2.0s)</div>
+      </div>
+    </section>
+
+    <!-- Right Column: Gauges & Telemetry -->
+    <section class="panel">
+      <div class="panel-header">
+        <span>Behavioral Telemetry</span>
+        <span>📊 Output</span>
+      </div>
+      <div class="panel-body">
+
+        <!-- Proboscis Feeding Motor Gauge -->
+        <div class="gauge-card">
+          <div class="gauge-label">
+            <span>Proboscis Feeding Extension (MN9)</span>
+            <span id="mn9-rate-text" style="color: var(--magenta); font-weight: bold;">0.0 Hz</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill" id="mn9-bar"></div>
+          </div>
+        </div>
+
+        <!-- Steering Left/Right Needle -->
+        <div class="gauge-card">
+          <div class="gauge-label">
+            <span>Steering Command (DNa02 L vs R)</span>
+            <span id="dna-text" style="color: var(--gold); font-weight: bold;">0.0 | 0.0 Hz</span>
+          </div>
+          <div class="steering-track">
+            <div class="steering-needle" id="steering-needle"></div>
+          </div>
+        </div>
+
+        <!-- Forward Walking Velocity -->
+        <div class="gauge-card">
+          <div class="gauge-label">
+            <span>Forward Walking Command (P9_oDN1)</span>
+            <span id="odn-rate-text" style="color: var(--cyan); font-weight: bold;">0.0 Hz</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill" id="odn-bar" style="background: var(--cyan); box-shadow: 0 0 10px var(--cyan);"></div>
+          </div>
+        </div>
+
+        <!-- System Telemetry HUD -->
+        <div class="control-card">
+          <div class="control-title">System & GPU Telemetry</div>
+          <div class="telemetry-grid">
+            <div class="metric-box">
+              <div class="metric-name">Throughput</div>
+              <div class="metric-value" id="rt-val">1.3x</div>
+            </div>
+            <div class="metric-box">
+              <div class="metric-name">Step Latency</div>
+              <div class="metric-value" id="lat-val">72 μs</div>
+            </div>
+            <div class="metric-box">
+              <div class="metric-name">Sim Time</div>
+              <div class="metric-value" id="time-val">0.00 s</div>
+            </div>
+            <div class="metric-box">
+              <div class="metric-name">GPU VRAM</div>
+              <div class="metric-value" id="vram-val">14 MB</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    // State & WebSocket
+    let ws = null;
+    let neurons = [];
+    let isPaused = false;
+    let recentSpikes = []; // for raster plot: [{t, id, color}]
+
+    // DOM Elements
+    const mapCanvas = document.getElementById("neural-map");
+    const mapCtx = mapCanvas.getContext("2d");
+    const rasterCanvas = document.getElementById("raster-plot");
+    const rasterCtx = rasterCanvas.getContext("2d");
+    const tooltip = document.getElementById("tooltip");
+
+    // Controls
+    const sugarSlider = document.getElementById("sugar-slider");
+    const bitterSlider = document.getElementById("bitter-slider");
+    const p9Slider = document.getElementById("p9-slider");
+    const steerSlider = document.getElementById("steer-slider");
+    const pauseBtn = document.getElementById("pause-btn");
+    const resetBtn = document.getElementById("reset-btn");
+
+    function resizeCanvases() {
+      mapCanvas.width = mapCanvas.parentElement.clientWidth;
+      mapCanvas.height = mapCanvas.parentElement.clientHeight;
+      rasterCanvas.width = rasterCanvas.parentElement.clientWidth;
+      rasterCanvas.height = rasterCanvas.parentElement.clientHeight;
+    }
+    window.addEventListener("resize", resizeCanvases);
+    resizeCanvases();
+
+    // Connect WebSocket
+    function connectWS() {
+      const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
+      ws = new WebSocket(`${proto}//${window.location.host}/ws`);
+
+      ws.onopen = () => {
+        document.getElementById("status-text").innerText = "RTX 3050 Online";
+        document.getElementById("status-badge").style.color = "var(--green)";
+      };
+
+      ws.onclose = () => {
+        document.getElementById("status-text").innerText = "Disconnected (Retrying...)";
+        document.getElementById("status-badge").style.color = "var(--red)";
+        setTimeout(connectWS, 1000);
+      };
+
+      ws.onmessage = (event) => {
+        const msg = JSON.parse(event.data);
+        if (msg.type === "init") {
+          neurons = msg.coords;
+          drawNeuralMap([]);
+        } else if (msg.type === "frame") {
+          handleFrame(msg.data);
+        }
+      };
+    }
+    connectWS();
+
+    // Flash intensity buffer for 5000 neurons
+    let flashLevels = new Float32Array(5000);
+
+    function handleFrame(data) {
+      if (data.paused) return;
+
+      // Update Telemetry
+      document.getElementById("time-val").innerText = `${data.t.toFixed(2)} s`;
+      document.getElementById("rt-val").innerText = `${data.rt_ratio.toFixed(2)}x`;
+      document.getElementById("lat-val").innerText = `${data.latency_us.toFixed(0)} μs`;
+      document.getElementById("vram-val").innerText = `${data.vram_mb.toFixed(0)} MB`;
+
+      // Update Behavioral Gauges
+      const rates = data.rates || {};
+      const mn9Left = rates["MN9_left"] || 0;
+      const mn9Right = rates["MN9_right"] || 0;
+      const mn9Avg = (mn9Left + mn9Right) / 2;
+      document.getElementById("mn9-rate-text").innerText = `${mn9Avg.toFixed(1)} Hz`;
+      document.getElementById("mn9-bar").style.width = `${Math.min(100, (mn9Avg / 100) * 100)}%`;
+
+      const dnaL = rates["DNa02_left"] || 0;
+      const dnaR = rates["DNa02_right"] || 0;
+      document.getElementById("dna-text").innerText = `L: ${dnaL.toFixed(0)} | R: ${dnaR.toFixed(0)} Hz`;
+
+      // Steering needle (-50 to +50 percent)
+      const diff = dnaR - dnaL; // positive -> right
+      const needlePos = Math.max(10, Math.min(90, 50 + diff * 1.5));
+      document.getElementById("steering-needle").style.left = `${needlePos}%`;
+
+      const odnL = rates["P9_oDN1_left"] || 0;
+      const odnR = rates["P9_oDN1_right"] || 0;
+      const odnAvg = (odnL + odnR) / 2;
+      document.getElementById("odn-rate-text").innerText = `${odnAvg.toFixed(1)} Hz`;
+      document.getElementById("odn-bar").style.width = `${Math.min(100, (odnAvg / 40) * 100)}%`;
+
+      // Spikes for flash & raster
+      const spiked = data.spikes || [];
+      for (let i = 0; i < spiked.length; i++) {
+        const idx = spiked[i];
+        flashLevels[idx] = 1.0;
+        if (neurons[idx]) {
+          recentSpikes.push({
+            t: data.t,
+            id: idx,
+            c: neurons[idx].c
+          });
+        }
+      }
+
+      // Decay older spikes in raster (keep last 2 seconds)
+      const cutoff = data.t - 2.0;
+      recentSpikes = recentSpikes.filter(s => s.t >= cutoff);
+
+      drawNeuralMap(spiked);
+      drawRaster(data.t);
+    }
+
+    // Canvas Rendering
+    function drawNeuralMap(spiked) {
+      if (!neurons.length) return;
+      const w = mapCanvas.width;
+      const h = mapCanvas.height;
+      const cx = w / 2;
+      const cy = h / 2;
+      const scale = Math.min(w, h) * 0.44;
+
+      mapCtx.fillStyle = "rgba(7, 9, 14, 0.4)";
+      mapCtx.fillRect(0, 0, w, h);
+
+      for (let i = 0; i < neurons.length; i++) {
+        const n = neurons[i];
+        const px = cx + n.x * scale;
+        const py = cy - n.y * scale;
+
+        const flash = flashLevels[i];
+        if (flash > 0.05) {
+          // Radiant Spiking Pulse
+          mapCtx.beginPath();
+          mapCtx.arc(px, py, 2.5 + flash * 4.5, 0, Math.PI * 2);
+          mapCtx.fillStyle = n.c;
+          mapCtx.shadowColor = n.c;
+          mapCtx.shadowBlur = flash * 12;
+          mapCtx.fill();
+          mapCtx.shadowBlur = 0;
+          flashLevels[i] *= 0.82; // decay flash
+        } else {
+          // Resting Node
+          mapCtx.beginPath();
+          mapCtx.arc(px, py, 1.2, 0, Math.PI * 2);
+          mapCtx.fillStyle = "#223348";
+          mapCtx.fill();
+        }
+      }
+    }
+
+    function drawRaster(currentT) {
+      const w = rasterCanvas.width;
+      const h = rasterCanvas.height;
+      rasterCtx.fillStyle = "rgba(7, 9, 14, 0.9)";
+      rasterCtx.fillRect(0, 0, w, h);
+
+      const tSpan = 2.0; // 2 seconds window
+      const tMin = currentT - tSpan;
+
+      for (let i = 0; i < recentSpikes.length; i++) {
+        const sp = recentSpikes[i];
+        const x = ((sp.t - tMin) / tSpan) * w;
+        const y = h - (sp.id / 5000) * h;
+
+        rasterCtx.fillStyle = sp.c;
+        rasterCtx.fillRect(x, y, 1.5, 1.5);
+      }
+    }
+
+    // Rate update sender
+    function sendRates() {
+      if (!ws || ws.readyState !== WebSocket.OPEN) return;
+      const sugar = parseFloat(sugarSlider.value);
+      const bitter = parseFloat(bitterSlider.value);
+      const p9 = parseFloat(p9Slider.value);
+      const steer = parseFloat(steerSlider.value) / 100.0;
+
+      // Calculate L/R P9 rates from bias
+      const p9Left = p9 * (1.0 - Math.max(0, steer));
+      const p9Right = p9 * (1.0 + Math.min(0, steer));
+
+      ws.send(JSON.stringify({
+        action: "set_rates",
+        sugar: sugar,
+        bitter: bitter,
+        p9_left: p9Left,
+        p9_right: p9Right
+      }));
+    }
+
+    sugarSlider.oninput = () => {
+      document.getElementById("sugar-val").innerText = `${sugarSlider.value} Hz`;
+      sendRates();
+    };
+    bitterSlider.oninput = () => {
+      document.getElementById("bitter-val").innerText = `${bitterSlider.value} Hz`;
+      sendRates();
+    };
+    p9Slider.oninput = () => {
+      document.getElementById("p9-val").innerText = `${p9Slider.value} Hz`;
+      sendRates();
+    };
+    steerSlider.oninput = () => {
+      const v = steerSlider.value;
+      document.getElementById("steer-val").innerText = v == 0 ? "Center" : (v < 0 ? `L ${Math.abs(v)}%` : `R ${v}%`);
+      sendRates();
+    };
+
+    pauseBtn.onclick = () => {
+      isPaused = !isPaused;
+      pauseBtn.innerText = isPaused ? "Resume" : "Pause";
+      ws.send(JSON.stringify({ action: isPaused ? "pause" : "resume" }));
+    };
+
+    resetBtn.onclick = () => {
+      recentSpikes = [];
+      flashLevels.fill(0);
+      ws.send(JSON.stringify({ action: "reset" }));
+    };
+
+    function applyPreset(preset) {
+      if (preset === "sugar") {
+        sugarSlider.value = 200;
+        bitterSlider.value = 0;
+        p9Slider.value = 0;
+      } else if (preset === "bitter") {
+        sugarSlider.value = 0;
+        bitterSlider.value = 200;
+        p9Slider.value = 0;
+      } else if (preset === "walk") {
+        sugarSlider.value = 0;
+        bitterSlider.value = 0;
+        p9Slider.value = 100;
+        steerSlider.value = 0;
+      } else if (preset === "steer_left") {
+        p9Slider.value = 100;
+        steerSlider.value = -60;
+      } else if (preset === "steer_right") {
+        p9Slider.value = 100;
+        steerSlider.value = 60;
+      } else if (preset === "clear") {
+        sugarSlider.value = 0;
+        bitterSlider.value = 0;
+        p9Slider.value = 0;
+        steerSlider.value = 0;
+      }
+      sugarSlider.oninput();
+      bitterSlider.oninput();
+      p9Slider.oninput();
+      steerSlider.oninput();
+    }
+  </script>
+</body>
+</html>
