@@ -24,7 +24,7 @@ flowchart TD
     end
 
     subgraph Python_Server ["Python Connectome Engine (Server on RTX 3050 GPU)"]
-        WS_SERVER["visual_server.py (/game_ws Endpoint)"] --> PARSE["Unpack Sensory Drive to Firing Rates (Hz)"]
+        WS_SERVER["unity_backend/game_server.py (/game_ws Endpoint)"] --> PARSE["Unpack Sensory Drive to Firing Rates (Hz)"]
         PARSE --> GPU["RealtimeSubnetLIF Engine (PyTorch CUDA Graph)"]
         
         subgraph Subnet_5k ["5,000-Neuron Subnetwork"]
@@ -42,11 +42,28 @@ flowchart TD
 
 ---
 
-## 2. High-Speed Sensory-Motor Communication Protocol
+## 2. 🛠️ How to Run When Developing with Unity
+
+### 1. Launch the Game Backend Server:
+```bash
+# From repository root (WSL or Windows with CUDA):
+python unity_backend/game_server.py --port 8080 --device cuda
+```
+
+### 2. Endpoints Available to Unity:
+- **WebSocket Link:** `ws://127.0.0.1:8080/game_ws` (High-speed bidirectional sensory/motor link at 60 Hz)
+- **Health Check:** `http://127.0.0.1:8080/health` (Telemetry and status verification)
+
+### 3. Unity C# Scripts Reference:
+- Refer to [Section 6](#6-unity-side-c-scripts) below for the complete C# scripts (`FlySensors.cs`, `FlyCharacterController.cs`, and `FlyBrainClient.cs`).
+
+---
+
+## 3. High-Speed Sensory-Motor Communication Protocol
 
 Communication runs over a local WebSocket channel (`ws://127.0.0.1:8080/game_ws`) at **60 Hz** (every 16.6 ms). Over local loopback, round-trip network latency is under **1 ms**.
 
-### 2.1 Sensory Payload (Unity $\to$ Python Server)
+### 3.1 Sensory Payload (Unity $\to$ Python Server)
 Sent by Unity at the start of each physics tick:
 
 ```json
@@ -73,7 +90,7 @@ Sent by Unity at the start of each physics tick:
 }
 ```
 
-### 2.2 Motor Payload (Python Server $\to$ Unity)
+### 3.2 Motor Payload (Python Server $\to$ Unity)
 Computed by the 5,000-neuron connectome and sent back to Unity:
 
 ```json
@@ -103,12 +120,12 @@ Computed by the 5,000-neuron connectome and sent back to Unity:
 
 ---
 
-## 3. Sensory Ingestion in Python Backend
+## 4. Sensory Ingestion in Python Backend
 
 When the Python server receives the sensory payload, it translates 3D environmental values into biological Poisson firing rates:
 
 ```python
-# In code/visual_server.py (game_ws handler)
+# In unity_backend/sensory_encoder.py
 def process_game_sensory_frame(engine, data):
     vision = data.get("vision", {})
     taste = data.get("contact_taste", {})
@@ -144,9 +161,9 @@ def process_game_sensory_frame(engine, data):
 
 ---
 
-## 4. Motor Decoding in Python Backend
+## 5. Motor Decoding in Python Backend
 
-After stepping the GPU for 10–16 ms, the descending neuron activity is converted into physical forces:
+After stepping the GPU for 10–16 ms, the descending neuron activity is converted into physical forces (implemented in `unity_backend/motor_decoder.py` with neuromuscular smoothing):
 
 ```python
 def decode_motor_outputs(engine, duration_sec):
@@ -187,11 +204,11 @@ def decode_motor_outputs(engine, duration_sec):
 
 ---
 
-## 5. Unity-Side C# Scripts
+## 6. Unity-Side C# Scripts
 
 Create these three modular C# scripts inside your Unity Project (`Assets/Scripts/FlyBrain/`):
 
-### 5.1 `FlySensors.cs`
+### 6.1 `FlySensors.cs`
 Extracts bilateral compound eye view angles and proboscis collider contacts:
 
 ```csharp
@@ -247,7 +264,7 @@ public class FlySensors : MonoBehaviour
 
 ---
 
-### 5.2 `FlyCharacterController.cs`
+### 6.2 `FlyCharacterController.cs`
 Receives motor outputs from the brain and applies physical movement and animations:
 
 ```csharp
@@ -301,7 +318,7 @@ public class FlyCharacterController : MonoBehaviour
 
 ---
 
-### 5.3 `FlyBrainClient.cs`
+### 6.3 `FlyBrainClient.cs`
 Maintains the high-speed WebSocket link between Unity and the Python simulation:
 
 ```csharp
@@ -380,19 +397,19 @@ public class FlyBrainClient : MonoBehaviour
 
 ---
 
-## 6. Implementation Roadmap
+## 7. Implementation Roadmap
 
-| Phase | Objective | Deliverables | Estimated Time |
+| Phase | Objective | Deliverables | Status |
 |---|---|---|---|
-| **Phase 1** | **Server Game Endpoint** | Add `/game_ws` handler in `code/visual_server.py` supporting real-time sensory ingestion and motor torque extraction. | 1 Day |
-| **Phase 2** | **Unity Environment Setup** | Create new Unity 3D project, import 3D fly asset, add `NativeWebSocket` package. | 1 Day |
-| **Phase 3** | **Sensor Integration** | Set up bilateral eye raycasts and mouth/tarsi collision triggers in `FlySensors.cs`. | 1 Day |
-| **Phase 4** | **Motor Physics & Locomotion** | Connect descending neuron torques to Unity Rigidbody in `FlyCharacterController.cs`. | 1 Day |
-| **Phase 5** | **Closed-Loop Sugar Experiment** | Place interactive sugar cubes in the 3D scene (spawned on mouse-click); observe autonomous navigation and proboscis feeding. | 1 Day |
+| **Phase 1** | **Server Game Endpoint** | Dedicated WebSocket backend in `unity_backend/game_server.py` supporting real-time sensory ingestion, motor decoding, and mock client verification. | ✅ **Completed** |
+| **Phase 2** | **Unity Environment Setup** | Create new Unity 3D project, import 3D fly asset, add `NativeWebSocket` package. | In Progress |
+| **Phase 3** | **Sensor Integration** | Set up bilateral eye raycasts and mouth/tarsi collision triggers in `FlySensors.cs`. | Ready |
+| **Phase 4** | **Motor Physics & Locomotion** | Connect descending neuron torques to Unity Rigidbody in `FlyCharacterController.cs`. | Ready |
+| **Phase 5** | **Closed-Loop Sugar Experiment** | Place interactive sugar cubes in the 3D scene (spawned on mouse-click); observe autonomous navigation and proboscis feeding. | Ready |
 
 ---
 
-## 7. Interactive Game Mechanics Enabled by this Plan
+## 8. Interactive Game Mechanics Enabled by this Plan
 
 Once implemented, you can build exciting interactive game experiments:
 
