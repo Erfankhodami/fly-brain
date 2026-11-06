@@ -6,51 +6,110 @@ This document provides the exact command-line instructions, verification criteri
 
 ## 1. Executive Summary
 
-| Target Metric | Design Budget | Measured Result | Status |
-|---|---|---|---|
-| **Neuron Count** | Exactly 5,000 | 5,000 neurons | **PASSED** |
-| **Synapse Count** | Induced recurrent subgraph | 512,210 directed synapses (2.05% density) | **PASSED** |
-| **Simulation Timestep ($dt$)** | $0.1\text{ ms} = 100\ \mu\text{s}$ | $0.1\text{ ms}$ (10,000 steps per simulated second) | **PASSED** |
-| **Step Latency Ceiling** | $\le 100.0\ \mu\text{s}$ / step | **$72.47\ \mu\text{s}$** (mean over 50,000 steps) | **PASSED** |
-| **Real-Time Throughput** | $\ge 1.00\times$ real-time | **$1.31\times\text{ -- }1.38\times$ real-time** | **PASSED** |
-| **Peak GPU VRAM** | $\le 500\text{ MB}$ | **$14.07\text{ MB}$ allocated** ($26.00\text{ MB}$ reserved) | **PASSED** |
-| **Biological Selectivity** | Double-dissociation | Independent activation of Locomotion vs. Feeding | **PASSED** |
+| Target Metric                  | Design Budget                      | Measured Result                                              | Status     |
+| ------------------------------ | ---------------------------------- | ------------------------------------------------------------ | ---------- |
+| **Neuron Count**               | Exactly 5,000                      | 5,000 neurons                                                | **PASSED** |
+| **Synapse Count**              | Induced recurrent subgraph         | 512,210 directed synapses (2.05% density)                    | **PASSED** |
+| **Simulation Timestep ($dt$)** | $0.1\text{ ms} = 100\ \mu\text{s}$ | $0.1\text{ ms}$ (10,000 steps per simulated second)          | **PASSED** |
+| **Step Latency Ceiling**       | $\le 100.0\ \mu\text{s}$ / step    | **$72.47\ \mu\text{s}$** (mean over 50,000 steps)            | **PASSED** |
+| **Real-Time Throughput**       | $\ge 1.00\times$ real-time         | **$1.31\times\text{ -- }1.38\times$ real-time**              | **PASSED** |
+| **Peak GPU VRAM**              | $\le 500\text{ MB}$                | **$14.07\text{ MB}$ allocated** ($26.00\text{ MB}$ reserved) | **PASSED** |
+| **Biological Selectivity**     | Double-dissociation                | Independent activation of Locomotion vs. Feeding             | **PASSED** |
 
 ---
 
-## 2. Test Execution Commands
+## 2. Test Execution Commands & Environment Guide
 
-All commands are run using Python 3.10 with PyTorch CUDA in the verified WSL2 Ubuntu environment:
+### 2.1 Understanding the Environment & Paths
 
-### A. Combined Sensorimotor Test (Locomotion + Feeding)
-Runs simultaneous stimulation of forward walking inputs (P9 @ 100 Hz) and sugar feeding receptors (Sugar GRNs @ 200 Hz):
-```bash
+The simulation runs using Python 3.10 with PyTorch 2.14+cu126 in the `brain-fly` Conda environment on WSL2 Ubuntu.
+
+Depending on where your terminal is opened, there are two ways to run the tests:
+
+#### Option A: Directly Inside a WSL2 Terminal (Interactive)
+If you already have a WSL terminal open (`efi@Erfan:...`):
+1. **Navigate to the project folder on the D: drive:**
+   ```bash
+   cd "/mnt/d/Development/Fly'sBrain/fly-brain"
+   ```
+2. **Activate the environment:**
+   ```bash
+   conda activate brain-fly
+   ```
+3. **Execute the benchmark script:**
+   ```bash
+   python code/benchmark_realtime.py --t_run 5.0 --experiment walk_and_taste
+   ```
+
+#### Option B: From Windows PowerShell / CMD (One-Liner)
+If you are working in Windows PowerShell in `D:\Development\Fly'sBrain\fly-brain`:
+```powershell
 wsl -e /home/efi/miniconda/envs/brain-fly/bin/python code/benchmark_realtime.py --t_run 5.0 --experiment walk_and_taste
 ```
 
-### B. Pure Feeding Test (Sugar Gustatory Receptor Activation)
+> [!NOTE]
+> **What does `/home/efi/miniconda/envs/brain-fly/bin/python` do?**
+> - When you run `conda activate brain-fly`, Conda sets your terminal's default `python` to point to `/home/efi/miniconda/envs/brain-fly/bin/python`.
+> - By specifying `/home/efi/miniconda/envs/brain-fly/bin/python` directly, you are directly executing the exact Python binary inside the `brain-fly` environment (with all its PyTorch CUDA packages) without needing to initialize or run `conda activate` first. This makes it ideal for one-liner commands called from Windows (`wsl -e`).
+
+---
+
+### 2.2 Available Experiment Protocols
+
+#### A. Combined Sensorimotor Test (Locomotion + Feeding)
+Runs simultaneous stimulation of forward walking inputs (P9 @ 100 Hz) and sugar feeding receptors (Sugar GRNs @ 200 Hz):
+- **Inside WSL:**
+  ```bash
+  python code/benchmark_realtime.py --t_run 5.0 --experiment walk_and_taste
+  ```
+- **From Windows PowerShell:**
+  ```powershell
+  wsl -e /home/efi/miniconda/envs/brain-fly/bin/python code/benchmark_realtime.py --t_run 5.0 --experiment walk_and_taste
+  ```
+
+#### B. Pure Feeding Test (Sugar Gustatory Receptor Activation)
 Stimulates 23 Sugar GRNs at 200 Hz to evaluate signal propagation through the Subesophageal Zone (SEZ) to proboscis motor neurons (`MN9_left` and `MN9_right`):
-```bash
-wsl -e /home/efi/miniconda/envs/brain-fly/bin/python code/benchmark_realtime.py --t_run 1.0 --experiment taste_sugar
-```
+- **Inside WSL:**
+  ```bash
+  python code/benchmark_realtime.py --t_run 1.0 --experiment taste_sugar
+  ```
+- **From Windows PowerShell:**
+  ```powershell
+  wsl -e /home/efi/miniconda/envs/brain-fly/bin/python code/benchmark_realtime.py --t_run 1.0 --experiment taste_sugar
+  ```
 
-### C. Pure Locomotion Test (P9 Sensory Activation)
+#### C. Pure Locomotion Test (P9 Sensory Activation)
 Stimulates bilateral P9 mechanosensory inputs at 100 Hz to test activation of descending command neurons (`P9_oDN1` and `DNa02`):
-```bash
-wsl -e /home/efi/miniconda/envs/brain-fly/bin/python code/benchmark_realtime.py --t_run 1.0 --experiment walk
-```
+- **Inside WSL:**
+  ```bash
+  python code/benchmark_realtime.py --t_run 1.0 --experiment walk
+  ```
+- **From Windows PowerShell:**
+  ```powershell
+  wsl -e /home/efi/miniconda/envs/brain-fly/bin/python code/benchmark_realtime.py --t_run 1.0 --experiment walk
+  ```
 
-### D. Spontaneous Baseline Test (Resting / Idle State)
+#### D. Spontaneous Baseline Test (Resting / Idle State)
 Simulates the network with zero external stimulation to verify that recurrent connectivity does not trigger spontaneous epileptic explosion:
-```bash
-wsl -e /home/efi/miniconda/envs/brain-fly/bin/python code/benchmark_realtime.py --t_run 1.0 --experiment idle
-```
+- **Inside WSL:**
+  ```bash
+  python code/benchmark_realtime.py --t_run 1.0 --experiment idle
+  ```
+- **From Windows PowerShell:**
+  ```powershell
+  wsl -e /home/efi/miniconda/envs/brain-fly/bin/python code/benchmark_realtime.py --t_run 1.0 --experiment idle
+  ```
 
-### E. Bitter Aversion Test (Negative Control)
+#### E. Bitter Aversion Test (Negative Control)
 Stimulates 42 Bitter GRNs at 200 Hz to confirm proboscis extension motor neurons are not triggered:
-```bash
-wsl -e /home/efi/miniconda/envs/brain-fly/bin/python code/benchmark_realtime.py --t_run 1.0 --experiment taste_bitter
-```
+- **Inside WSL:**
+  ```bash
+  python code/benchmark_realtime.py --t_run 1.0 --experiment taste_bitter
+  ```
+- **From Windows PowerShell:**
+  ```powershell
+  wsl -e /home/efi/miniconda/envs/brain-fly/bin/python code/benchmark_realtime.py --t_run 1.0 --experiment taste_bitter
+  ```
 
 ---
 
